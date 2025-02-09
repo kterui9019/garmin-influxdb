@@ -137,27 +137,6 @@ def download_all_activity(client, activities):
         quit()
 
 
-def create_json_body(measurement, measurement_value, datestamp, tags=None):
-    """
-    this creates the json body that will be used to create measurements in influxdb
-
-    :param measurement: the name of the measurement to be created
-    :param measurement_value: the numerical value of the measurement
-    :param datestamp: datestamp in the following format: 2020-10-20t00:00:00z
-    :param tags: any tags to be assiated with the measurement. expects a dict
-    :return: json object
-    """
-    return [
-        {
-            "measurement": measurement,
-            "tags": tags,
-            "time": datestamp,
-            "fields": {
-                "value": measurement_value
-            }
-        }
-    ]
-
 def create_point(measurement, measurement_value, datestamp):
     return Point("activity").field(measurement, measurement_value).time(datestamp)
 
