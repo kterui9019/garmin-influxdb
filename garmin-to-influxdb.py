@@ -17,8 +17,10 @@ from influxdb_client_3 import InfluxDBClient3, Point
 
 import logging
 # logging.basicConfig(level=logging.DEBUG)
-start_date = date(2023,9,1)
-end_date = date(2023,9,17)
+today = date.today()
+start_date = today - timedelta(days=30)
+
+end_date = today
 
 today = date.today()
 # The speed multiplier was found by taking the "averageSpeed" float from an activity and comparing
@@ -157,7 +159,7 @@ def create_json_body(measurement, measurement_value, datestamp, tags=None):
     ]
 
 def create_point(measurement, measurement_value, datestamp):
-    return Point("measurement").field(measurement, measurement_value).time(datestamp)
+    return Point("activity").field(measurement, measurement_value).time(datestamp)
 
 
 
@@ -177,10 +179,13 @@ def create_influxdb_daily_measurement(user_data, influxdb_client: InfluxDBClient
         else:
             if "minutes" in heading.lower():
                 value = value / 60
-            # json_body = create_json_body(heading, value, user_data['current_date'])
             point = create_point(heading, value, user_data['current_date'])
-            print(point)
-            influxdb_client.write(database="garmin",record=point)
+            print(f"create_point: {point}")
+            try:
+                influxdb_client.write(database=influxdb_bucket, record=point)
+                print("SUCCESS: Data written to InfluxDB")
+            except Exception as e:
+                print(e)
 
 
 def create_influxdb_multi_measurement(user_data, subset_list_of_stats, start_time_heading, date_format,
@@ -202,9 +207,6 @@ def create_influxdb_multi_measurement(user_data, subset_list_of_stats, start_tim
     temp_dict = {}
     date_format = date_format
     for entry in user_data:
-        print("###############")
-        print(entry)
-        print("###############")
         activity_start = entry[start_time_heading]
         if timestamp_offset:
             timestamp = time.mktime(time.strptime(activity_start, date_format)) + 14400
@@ -225,17 +227,14 @@ def create_influxdb_multi_measurement(user_data, subset_list_of_stats, start_tim
             else:
                 if "speed" in inner_heading.lower():
                     value = value * speed_multiplier
-                # json_body = create_json_body(inner_heading, value, heading)
-                # print("@@@@@@@@@@@@@")
-                # print(json_body)
-                # print("@@@@@@@@@@@@@")
-                # print(current_date)
                 print("Adding: %s\nValue: %s" % (inner_heading, value))
 
                 point = create_point(inner_heading, value, heading)
-                print(point)
-                influxdb_client.write(database="garmin",record=point)
-                influxdb_client.write(database=influxdb_bucket, record=point)
+                try:
+                    influxdb_client.write(database=influxdb_bucket, record=point)
+                    print("SUCCESS: Data written to InfluxDB")
+                except Exception as e:
+                    print(e)
 
 
 client = connect_to_garmin(username=garmin_username,password=garmin_password)
